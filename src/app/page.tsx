@@ -1,14 +1,13 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import HeroScene from "@/components/scene/HeroScene";
-import SlideInOnScroll from "@/components/SlideInOnScroll";
-import Workflow from "@/components/Workflow";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { ChatInput } from "@/components/ui/chat-input";
+import { GradientButton } from "@/components/ui/gradient-button";
+import { ModelSelector } from "@/components/ui/model-selector";
 
 export default function LandingPage() {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -22,21 +21,28 @@ export default function LandingPage() {
   const l2y = useTransform(scrollYProgress, [0, 1], [0, 30]);
   const l3y = useTransform(scrollYProgress, [0, 1], [0, -20]);
 
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "exists">("idle");
+  
+  // Image generation states
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const [selectedModel, setSelectedModel] = useState("stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [inputImageUrl, setInputImageUrl] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Auto typewriter sentences (not linked to scroll). Keep static prefix "Jony " always visible
-  const staticPrefix = "Jony ";
+  // Auto typewriter sentences (not linked to scroll). Keep static prefix "Renoir " always visible
+  const staticPrefix = "Renoir ";
   const phrases = [
-    "turns your idea into beautiful, production-ready UI. Type what you want, drop a style reference, and ship.",
-    "designs tasteful landing pages from a single prompt and a style reference.",
-    "improves your existing React + Tailwind code with WCAG-safe tokens.",
-    "exports clean components, design tokens, and a Figma-ready spec.",
-    "iterates in chat until it matches your taste."
+    "transforms your images with AI. Upload, describe, create.",
+    "makes your photos better. Instantly.",
+    "turns ideas into reality. One image at a time.",
+    "sees what you see. Makes it better.",
+    "creates magic from moments."
   ];
   const [sentenceIndex, setSentenceIndex] = useState(0);
   const [typedDynamic, setTypedDynamic] = useState("");
@@ -73,24 +79,101 @@ export default function LandingPage() {
     return () => window.clearTimeout(id);
   }, [typedDynamic, isDeleting, sentenceIndex]);
 
-  async function joinWaitlist(e: React.FormEvent) {
+
+  async function generateImage(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("loading");
+    if (!selectedImage || !prompt.trim()) return;
+
+    console.log('=== GENERATE IMAGE CALLED ===');
+    console.log('Selected image:', selectedImage);
+    console.log('Prompt:', prompt);
+
+    setIsGenerating(true);
+    setGenerationError(null);
+    setGeneratedImageUrl(null);
+    setInputImageUrl(null);
+
     try {
-      const res = await fetch("/api/waitlist", {
+      console.log('Creating FormData...');
+      const formData = new FormData();
+      formData.append('image', selectedImage);
+      formData.append('prompt', prompt);
+      formData.append('model', selectedModel);
+
+      console.log('Making API call to /api/generate...');
+      const res = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: formData,
       });
-      if (res.status === 409) {
-        setStatus("exists");
-        return;
+
+      console.log('API response received:', res.status, res.statusText);
+
+      // Check if response is JSON
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error('Non-JSON response:', text);
+        throw new Error('Server returned an invalid response. Please check your environment variables.');
       }
-      if (!res.ok) throw new Error("failed");
-      setStatus("success");
-      setEmail("");
-    } catch {
-      setStatus("error");
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMessage = data.error || 'Generation failed';
+        const errorDetails = data.details ? ` ${data.details}` : '';
+        throw new Error(errorMessage + errorDetails);
+      }
+
+      console.log('Received URLs from API:', {
+        inputImageUrl: data.inputImageUrl,
+        outputImageUrl: data.outputImageUrl
+      });
+      
+      // Test if the URLs are accessible
+      if (data.inputImageUrl) {
+        console.log('Testing input image URL:', data.inputImageUrl);
+        console.log('Input image URL type:', typeof data.inputImageUrl);
+        fetch(data.inputImageUrl, { method: 'HEAD' })
+          .then(res => {
+            console.log('Input image accessible:', res.status, res.statusText);
+            console.log('Input image headers:', res.headers.get('content-type'));
+          })
+          .catch(err => console.error('Input image error:', err));
+      }
+      
+      if (data.outputImageUrl) {
+        console.log('Testing output image URL:', data.outputImageUrl);
+        console.log('Output image URL type:', typeof data.outputImageUrl);
+        fetch(data.outputImageUrl, { method: 'HEAD' })
+          .then(res => {
+            console.log('Output image accessible:', res.status, res.statusText);
+            console.log('Output image headers:', res.headers.get('content-type'));
+          })
+          .catch(err => console.error('Output image error:', err));
+      }
+      
+      setGeneratedImageUrl(data.outputImageUrl);
+      setInputImageUrl(data.inputImageUrl);
+    } catch (error) {
+      console.error('Generation error:', error);
+      setGenerationError(error instanceof Error ? error.message : 'Generation failed');
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log('Image selected:', file.name, file.size, file.type);
+      setSelectedImage(file);
+      
+      // Create a preview URL for immediate display
+      const previewUrl = URL.createObjectURL(file);
+      setInputImageUrl(previewUrl);
+      
+      setGenerationError(null);
+      setGeneratedImageUrl(null);
     }
   }
 
@@ -99,15 +182,11 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 isolate border-b border-white/10 bg-black" style={{ backgroundColor: "#000" }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-2">
-            <Image src="/jony-logo.png" alt="Jony logo" width={24} height={24} />
-            <span className="font-semibold">Jony</span>
+            <Image src="/jony-logo.png" alt="Renoir logo" width={24} height={24} />
+            <span className="font-semibold">Renoir</span>
           </div>
           <nav className="hidden gap-6 text-sm md:flex">
-            <a href="#features" className="text-zinc-300 hover:text-white">Why Jony</a>
-            <a href="#demo" className="text-zinc-300 hover:text-white">Demo</a>
-            <a href="#waitlist" className="text-zinc-300 hover:text-white">Waitlist</a>
           </nav>
-          <a href="/onboarding" className="rounded-md bg-white px-3 py-1.5 text-xs sm:text-sm font-bold text-zinc-900">Try it now</a>
         </div>
       </header>
 
@@ -164,9 +243,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 sm:pt-28 pb-16 sm:pb-20">
           {/* Full-width title block */}
           <motion.div style={{ opacity }} className="relative z-20 mx-auto max-w-3xl text-center -top-3">
-            <p className="text-xs sm:text-sm uppercase tracking-[0.25em] sm:tracking-[0.3em] text-white/80">The first AI agent with <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">taste</span></p>
+            <p className="text-xs sm:text-sm uppercase tracking-[0.25em] sm:tracking-[0.3em] text-white/80">AI that <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">understands</span> your vision</p>
             <h1 className="mt-3 sm:mt-4 text-balance text-4xl sm:text-6xl font-semibold leading-tight sm:leading-[1.05] md:text-7xl" style={{ fontFamily: 'SentinelBlack, ui-sans-serif, system-ui' }}>
-              Design quality UI. From a prompt.
+              Transform images. Instantly.
             </h1>
           </motion.div>
 
@@ -182,136 +261,204 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Premium glassmorphism CTA */}
+          {/* Image Generation Form */}
           <motion.div
-            id="waitlist"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative z-20 mt-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative z-20 mt-12"
           >
-            {/* Subtle radial scrim to preserve text contrast over bright shapes */}
-            <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.35),transparent_60%)]" />
-            <div className="mx-auto max-w-4xl text-center">
-              <h2 className="text-3xl sm:text-4xl font-semibold mb-3 sm:mb-4" style={{ fontFamily: 'SentinelSemiBold, ui-sans-serif, system-ui' }}>Get early access</h2>
-              <p className="mt-2 sm:mt-3 text-base sm:text-lg text-zinc-200 drop-shadow-[0_0_8px_rgba(0,0,0,0.35)]" style={{ fontFamily: 'SentinelMedium, ui-sans-serif, system-ui' }}>Be among the first to try Jony.</p>
-              
-              {/* Waitlist form container (no blur/box) */}
-              <div className="mt-5 sm:mt-6">
-                <form onSubmit={joinWaitlist} className="space-y-3 sm:space-y-4">
-                  {/* InputWithButton layout from shadcn */}
-                  <div className="flex w-full items-center gap-2 flex-col sm:flex-row">
-                    <Input
-                      type="email"
-                      required
-                      placeholder="Your Email Address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="flex-1 h-14 sm:h-14 text-lg sm:text-lg bg-black/60 border-white/20 text-white placeholder:text-base sm:placeholder:text-lg placeholder:text-white/50 placeholder:[font-family:SentinelBook,ui-sans-serif,system-ui] focus-visible:ring-white/20 focus-visible:border-white/40 rounded-xl w-full"
-                    />
-                    <Button
-                      type="submit"
-                      disabled={status === "loading"}
-                      size="lg"
-                      className="h-12 sm:h-14 px-5 sm:px-6 text-base sm:text-lg font-semibold bg-white text-black hover:bg-zinc-100 shadow-sm transition rounded-xl border border-white/20 w-full sm:w-auto"
-                    >
-                      {status === "loading" ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin mr-2" />
-                          Joining…
-                        </>
-                      ) : (
-                        <>Join the waitlist</>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-                
-                {/* Status messages */}
-                <div className="mt-4 text-center">
-                  {status === "success" && (
-                    <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-                      ✓ You're in. We'll be in touch soon.
-                    </Badge>
-                  )}
-                  {status === "exists" && (
-                    <Badge variant="secondary" className="bg-amber-500/20 text-amber-300 border-amber-500/30">
-                      ⚡ You're already on the list. Thanks!
-                    </Badge>
-                  )}
-                  {status === "error" && (
-                    <Badge variant="secondary" className="bg-red-500/20 text-red-300 border-red-500/30">
-                      ⚠ Something went wrong. Try again.
-                    </Badge>
-                  )}
-                </div>
-                
-              </div>
-            </div>
-          </motion.div>
-
-          {/* How Jony Works Section */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.8 }}
-            className="relative z-20 mt-24 sm:mt-32"
-          >
-            <div className="mx-auto max-w-5xl text-center">
-              <motion.h2 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-3xl sm:text-4xl md:text-5xl font-semibold mb-3 sm:mb-4" 
-                style={{ fontFamily: 'SentinelSemiBold, ui-sans-serif, system-ui' }}
-              >
-                How Jony works
-              </motion.h2>
-              <motion.p 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="text-lg sm:text-xl text-zinc-400 mb-10 sm:mb-16" 
-                style={{ fontFamily: 'SentinelBook, ui-sans-serif, system-ui' }}
-              >
-                Three simple steps to design-quality UI
-              </motion.p>
-
-              <Workflow />
-
-              {/* Bottom CTA */}
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="mt-12 sm:mt-16"
-              >
-                <p className="text-base sm:text-lg text-zinc-400 mb-5 sm:mb-6" style={{ fontFamily: 'SentinelBook, ui-sans-serif, system-ui' }}>
-                  Ready to create something beautiful?
-                </p>
-                <Button
-                  asChild
-                  size="lg"
-                  className="h-11 sm:h-12 px-6 sm:px-8 text-base sm:text-lg font-semibold bg-gradient-to-r from-white via-white to-gray-100 text-black hover:from-gray-50 hover:via-gray-50 hover:to-gray-200 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl border border-white/20"
+            <div className="mx-auto max-w-4xl">
+              <div className="relative">
+                {/* Subtle background glow */}
+                <div className="absolute inset-0 bg-white/5 rounded-3xl blur-xl -m-4" />
+                <div className="relative bg-black/20 backdrop-blur-sm rounded-3xl border border-white/10 p-8">
+                  <form onSubmit={generateImage} className="space-y-6">
+                {/* Image Upload */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                  <a href="/onboarding">
-                    Start with Jony
-                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </a>
-                </Button>
-              </motion.div>
+                  <ImageUpload
+                    onImageSelect={setSelectedImage}
+                    selectedImage={selectedImage}
+                    disabled={isGenerating}
+                  />
+                </motion.div>
+
+                {/* Model Selection - Compact Parameter */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.35 }}
+                  className="flex justify-center"
+                >
+                  <ModelSelector
+                    selectedModel={selectedModel}
+                    onModelChange={setSelectedModel}
+                    disabled={isGenerating}
+                  />
+                </motion.div>
+
+                {/* Prompt Input */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                >
+                  <ChatInput
+                    value={prompt}
+                    onChange={setPrompt}
+                    onSubmit={() => generateImage(new Event('submit') as any)}
+                    placeholder='Describe what you want (e.g., "remove background", "add a big smile", "make it brighter").'
+                    disabled={isGenerating}
+                    isLoading={isGenerating}
+                    maxLength={500}
+                  />
+                </motion.div>
+
+                {/* Generate Button */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  className="flex justify-center"
+                >
+                  <GradientButton
+                    type="submit"
+                    disabled={!selectedImage || !prompt.trim() || isGenerating}
+                    isLoading={isGenerating}
+                    size="lg"
+                    className="w-full max-w-lg shadow-2xl shadow-black/20 hover:shadow-3xl hover:shadow-black/30"
+                  >
+                    Generate Image
+                  </GradientButton>
+                </motion.div>
+                  </form>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              <AnimatePresence>
+                {generationError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    className="mt-6 p-6 bg-red-500/10 border border-red-500/30 rounded-2xl backdrop-blur-sm"
+                  >
+                    <p className="text-red-300 text-sm font-medium text-center mb-4">{generationError}</p>
+                    {(generationError.includes('credits') || generationError.includes('unavailable')) && (
+                      <div className="text-xs text-red-400 space-y-2">
+                        <p>To use image generation, you need to:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>Add credits to your Replicate account at <a href="https://replicate.com/account/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-red-300">replicate.com/account/billing</a></li>
+                          <li>Or use a different image generation service</li>
+                        </ol>
+                        <p className="mt-2 text-yellow-400">
+                          💡 <strong>Note:</strong> Replicate requires payment to use their API, even for free models.
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Results Display */}
+              <AnimatePresence>
+                {(inputImageUrl || generatedImageUrl) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -30 }}
+                    transition={{ duration: 0.6 }}
+                    className="mt-12 space-y-8"
+                  >
+                    <motion.h3 
+                      className="text-2xl font-semibold text-white text-center" 
+                      style={{ fontFamily: 'SentinelSemiBold, ui-sans-serif, system-ui' }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      Your Results
+                    </motion.h3>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Input Image */}
+                      {inputImageUrl && (
+                        <motion.div 
+                          className="space-y-4"
+                          initial={{ opacity: 0, x: -30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 }}
+                        >
+                          <h4 className="text-lg font-medium text-white/90 text-center">Original</h4>
+                          <div className="relative rounded-2xl overflow-hidden border border-white/20 bg-white/5 p-2">
+                            <img
+                              src={inputImageUrl}
+                              alt="Original"
+                              className="w-full h-auto rounded-xl"
+                              onError={(e) => {
+                                console.error('Failed to load input image:', inputImageUrl);
+                                e.currentTarget.style.display = 'none';
+                                // Show URL as fallback
+                                const fallback = document.createElement('div');
+                                fallback.className = 'p-4 bg-gray-800 text-white text-xs break-all';
+                                fallback.textContent = `Image failed to load. URL: ${inputImageUrl}`;
+                                e.currentTarget.parentNode?.appendChild(fallback);
+                              }}
+                              onLoad={() => console.log('Input image loaded successfully')}
+                            />
+                            {/* Debug info */}
+                            <div className="mt-2 p-2 bg-black/50 text-xs text-gray-400 break-all">
+                              Debug URL: {inputImageUrl}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Generated Image */}
+                      {generatedImageUrl && (
+                        <motion.div 
+                          className="space-y-4"
+                          initial={{ opacity: 0, x: 30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4 }}
+                        >
+                          <h4 className="text-lg font-medium text-white/90 text-center">Generated</h4>
+                          <div className="relative rounded-2xl overflow-hidden border border-white/20 bg-white/5 p-2">
+                            <img
+                              src={generatedImageUrl}
+                              alt="Generated"
+                              className="w-full h-auto rounded-xl"
+                              onError={(e) => {
+                                console.error('Failed to load generated image:', generatedImageUrl);
+                                e.currentTarget.style.display = 'none';
+                                // Show URL as fallback
+                                const fallback = document.createElement('div');
+                                fallback.className = 'p-4 bg-gray-800 text-white text-xs break-all';
+                                fallback.textContent = `Image failed to load. URL: ${generatedImageUrl}`;
+                                e.currentTarget.parentNode?.appendChild(fallback);
+                              }}
+                              onLoad={() => console.log('Generated image loaded successfully')}
+                            />
+                            {/* Debug info */}
+                            <div className="mt-2 p-2 bg-black/50 text-xs text-gray-400 break-all">
+                              Debug URL: {generatedImageUrl}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
 
-          {/* Spacing after How it Works */}
-          <div className="mt-16 sm:mt-24" />
+
         </div>
 
       </section>
@@ -319,11 +466,8 @@ export default function LandingPage() {
       <footer className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-12 text-[11px] sm:text-xs text-zinc-500">
           <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-            <span>© {new Date().getFullYear()} Jony</span>
+            <span>© {new Date().getFullYear()} Renoir</span>
             <div className="flex gap-3 sm:gap-4">
-              <a className="hover:text-zinc-300" href="#features">Features</a>
-              <a className="hover:text-zinc-300" href="#demo">Demo</a>
-              <a className="hover:text-zinc-300" href="#waitlist">Waitlist</a>
             </div>
           </div>
         </div>

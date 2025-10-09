@@ -1,6 +1,6 @@
-# Jony-project
+# Renoir-project
 
-Monorepo for the Jony project.
+Monorepo for the Renoir project.
 
 ## Apps
 - web (Next.js)

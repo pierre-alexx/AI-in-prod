@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "../app/globals.css";
 
 export const metadata: Metadata = {
-  title: "Jony - The first AI agent with taste",
-  description: "Design quality UI from a prompt. Jony turns your idea into beautiful, production-ready UI.",
+  title: "Renoir - Transform images. Instantly.",
+  description: "AI that understands your vision. Upload, describe, create. Make your photos better instantly.",
   icons: {
     icon: '/favicon.svg',
   },
