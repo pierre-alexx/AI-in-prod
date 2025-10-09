@@ -25,7 +25,7 @@ export default function LandingPage() {
   // Image generation states
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState("stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b");
+  const [selectedModel, setSelectedModel] = useState("black-forest-labs/flux-kontext-dev");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [inputImageUrl, setInputImageUrl] = useState<string | null>(null);
