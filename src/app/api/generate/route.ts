@@ -124,14 +124,45 @@ export async function POST(request: NextRequest) {
       console.log('Selected model for processing:', selectedModel);
       
       if (selectedModel.includes("black-forest-labs/flux-kontext-dev")) {
-        // Flux Kontext (image editing) - send input_image
+        // Flux Kontext (image editing) - send input_image with aspect ratio preservation
         console.log('Using Flux Kontext (image editing)');
+        
+        // Get input image dimensions to preserve aspect ratio
+        let width = 1024;
+        let height = 1024;
+        try {
+          const imgResponse = await fetch(publicUrl);
+          if (imgResponse.ok) {
+            const imgBuffer = await imgResponse.arrayBuffer();
+            const img = await import('sharp').then(sharp => sharp.default(imgBuffer));
+            const metadata = await img.metadata();
+            if (metadata.width && metadata.height) {
+              // Calculate dimensions that maintain aspect ratio, max 1024px
+              const maxSize = 1024;
+              const aspectRatio = metadata.width / metadata.height;
+              if (aspectRatio > 1) {
+                width = maxSize;
+                height = Math.round(maxSize / aspectRatio);
+              } else {
+                height = maxSize;
+                width = Math.round(maxSize * aspectRatio);
+              }
+              console.log('Input image dimensions:', metadata.width, 'x', metadata.height);
+              console.log('Output dimensions:', width, 'x', height);
+            }
+          }
+        } catch (dimensionError) {
+          console.log('Could not get image dimensions, using default 1024x1024:', dimensionError);
+        }
+        
         output = await replicate.run("black-forest-labs/flux-kontext-dev" as any, {
           input: {
             prompt: effectivePrompt,
             input_image: publicUrl,
             output_format: "jpg",
-            num_inference_steps: 30
+            num_inference_steps: 30,
+            width: width,
+            height: height
           }
         });
       } else if (selectedModel.includes("google/nano-banana")) {

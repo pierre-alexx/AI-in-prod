@@ -27,8 +27,8 @@ export function Header() {
     <header className="sticky top-0 z-50 isolate border-b border-white/10 bg-black">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center gap-2">
-          <Image src="/jony-logo.png" alt="Renoir logo" width={24} height={24} />
-          <span className="font-semibold">Renoir</span>
+          <Image src="/renoir-logo.png" alt="Renoir logo" width={48} height={48} />
+          <span className="font-semibold" style={{ fontFamily: 'SentinelBlack', fontStyle: 'italic' }}>Renoir</span>
         </div>
         <nav className="hidden gap-3 text-sm md:flex items-center">
           {!hideCta && (
@@ -37,7 +37,7 @@ export function Header() {
                 <span className="text-xs text-zinc-300 hidden sm:inline">{user.email}</span>
                 <Link href="/dashboard">
                   <GradientButton size="md" className="rounded-full font-bold px-5">
-                    Get started
+                    Sign in
                   </GradientButton>
                 </Link>
                 <button onClick={signOut} className="px-2 py-1 border border-white/20 rounded text-xs">Sign out</button>
@@ -45,7 +45,7 @@ export function Header() {
             ) : (
               <Link href="/signup">
                 <GradientButton size="md" className="rounded-full font-bold px-5">
-                  Get started
+                  Sign in
                 </GradientButton>
               </Link>
             )

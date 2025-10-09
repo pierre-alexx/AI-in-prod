@@ -173,3 +173,55 @@
   0%, 45% { opacity: 1; }
   50%, 100% { opacity: 0; }
 }
+
+/* Cursor assets: default arrow and pointer on interactive elements */
+@layer base {
+  /* Default cursor across the app */
+  html, body {
+    cursor: url('/arrow.svg') 0 0, auto;
+  }
+
+  /* Ensure text inputs/textareas keep text cursor */
+  input[type="text"], input[type="search"], input[type="password"], textarea {
+    cursor: text;
+  }
+
+  /* Buttons and interactive elements use pointer cursor */
+  button,
+  a,
+  summary,
+  label,
+  select,
+  option,
+  input[type="submit"],
+  input[type="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  /* ARIA roles commonly used for clickable widgets */
+  [role="button"],
+  [role="link"],
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"],
+  [role="slider"],
+  [role="combobox"],
+  /* Any focusable element is likely interactive */
+  [tabindex]:not([tabindex="-1"]),
+  /* Utility escape hatches */
+  .cursor-pointer,
+  [data-cursor="pointer"],
+  [data-clickable] {
+    cursor: url('/pointer.svg') 0 0, pointer;
+  }
+}
+
+/* Ensure our cursor utility overrides Tailwind's default `.cursor-pointer` */
+@layer utilities {
+  .cursor-pointer {
+    cursor: url('/pointer.svg') 0 0, pointer;
+  }
+}

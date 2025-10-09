@@ -20,7 +20,7 @@ export default function SignupPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
               Welcome
             </span>
-            <h1 className="mt-4 text-4xl sm:text-5xl font-semibold leading-tight font-['SentinelBlack','SentinelBook',serif]">
+            <h1 className="mt-4 text-6xl sm:text-7xl font-semibold leading-tight font-['SentinelBlack','SentinelBook',serif]">
               Create your account
             </h1>
             <p className="mt-4 text-white/70 text-base sm:text-lg">
@@ -28,16 +28,7 @@ export default function SignupPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 max-w-xl mt-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
-              <p className="text-sm text-white/80">Secure by design</p>
-              <p className="text-xs text-white/60 mt-1">Powered by Supabase Auth</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
-              <p className="text-sm text-white/80">Built for creators</p>
-              <p className="text-xs text-white/60 mt-1">Clean, fast, and delightful</p>
-            </div>
-          </div>
+          {/* Removed feature cards per request */}
         </section>
 
         {/* Right auth card */}

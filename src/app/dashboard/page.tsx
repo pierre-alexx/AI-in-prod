@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const supabase = getSupabaseBrowserClient();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState("black-forest-labs/flux-kontext-dev");
@@ -29,6 +30,22 @@ export default function DashboardPage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [inputImageUrl, setInputImageUrl] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const activeProject = activeIndex !== null && activeIndex >= 0 && activeIndex < projects.length ? projects[activeIndex] : null;
+  // Keyboard handlers for modal navigation
+  useEffect(() => {
+    if (activeIndex === null) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setActiveIndex(null);
+      } else if (e.key === 'ArrowLeft') {
+        setActiveIndex((i) => (i === null ? i : Math.max(0, i - 1)));
+      } else if (e.key === 'ArrowRight') {
+        setActiveIndex((i) => (i === null ? i : Math.min(projects.length - 1, i + 1)));
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeIndex, projects.length]);
 
   useEffect(() => {
     if (!user) return;
@@ -76,8 +93,20 @@ export default function DashboardPage() {
   }
 
   async function handleDelete(id: string) {
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm('Delete this project permanently?');
+      if (!ok) return;
+    }
     const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
     if (res.ok) setProjects((p) => p.filter((x) => x.id !== id));
+  }
+
+  function formatDate(iso: string) {
+    const d = new Date(iso);
+    return new Intl.DateTimeFormat(undefined, {
+      year: 'numeric', month: 'short', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    }).format(d);
   }
 
   if (isLoading) return <div className="p-6 text-white">Chargement...</div>;
@@ -85,7 +114,7 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8 text-white">
-      <h1 className="text-2xl font-semibold mb-6">Mon tableau de bord</h1>
+      <h1 className="mb-6 text-4xl sm:text-5xl md:text-6xl" style={{ fontFamily: 'SentinelBlack' }}>Dashboard</h1>
 
       {/* Image Generation Flow - same as landing */}
       <div className="relative z-20 mt-2">
@@ -164,20 +193,154 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold mt-14 mb-3">Mes projets</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {projects.map((p) => (
-          <div key={p.id} className="border border-white/10 rounded p-3 space-y-2 bg-black/30">
-            {p.output_image_url ? (
-              <img src={p.output_image_url} alt="output" className="rounded" />
-            ) : (
-              <div className="text-xs text-zinc-400">En cours...</div>
-            )}
-            <div className="text-xs text-zinc-400 break-words">{p.prompt}</div>
-            <button onClick={() => handleDelete(p.id)} className="text-xs px-2 py-1 border border-white/20 rounded">Supprimer</button>
-          </div>
+      <h2 className="mt-14 mb-6 text-3xl sm:text-4xl" style={{ fontFamily: 'SentinelBlack' }}>My Projects</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {projects.map((p, idx) => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_20px_40px_-20px_rgba(0,0,0,0.6)] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_30px_60px_-20px_rgba(0,0,0,0.7)] transition-shadow"
+          >
+            <button
+              onClick={() => setActiveIndex(idx)}
+              className="block w-full text-left"
+            >
+              <div className="relative aspect-[4/3] overflow-hidden">
+                {p.output_image_url ? (
+                  <img
+                    src={p.output_image_url}
+                    alt="Generated"
+                    className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
+                    Processing…
+                  </div>
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_10%,rgba(255,255,255,0.08),transparent_65%)] opacity-60" />
+              </div>
+
+              <div className="p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] sm:text-xs text-zinc-400">{formatDate(p.created_at)}</p>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
+                <p className="mt-2 text-sm sm:text-[15px] text-zinc-100 line-clamp-2 break-words">
+                  {p.prompt || '—'}
+                </p>
+              </div>
+            </button>
+
+            <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <a
+                href={p.output_image_url || '#'}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1 text-[11px] text-zinc-100"
+                onClick={(e) => { if (!p.output_image_url) e.preventDefault(); }}
+              >
+                Open
+              </a>
+              <button
+                onClick={() => handleDelete(p.id)}
+                className="rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-1 text-[11px] text-red-200"
+              >
+                Delete
+              </button>
+            </div>
+          </motion.div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {activeProject && (
+          <motion.div
+            key={activeProject.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setActiveIndex(null)}
+          >
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 30, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="relative w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative bg-black flex items-center justify-center" style={{ minHeight: '60vh', maxHeight: '80vh' }}>
+                {activeProject.output_image_url ? (
+                  <img 
+                    src={activeProject.output_image_url} 
+                    alt="Preview" 
+                    className="max-h-full max-w-full object-contain"
+                    style={{ maxHeight: '80vh' }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-400 text-sm">Processing…</div>
+                )}
+                <button
+                  onClick={() => setActiveIndex(null)}
+                  className="absolute top-3 right-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1 text-[11px] text-zinc-100"
+                >
+                  Close
+                </button>
+                {activeIndex !== null && activeIndex > 0 && (
+                  <button
+                    onClick={() => setActiveIndex((i) => (i !== null && i > 0 ? (i - 1) : i))}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1 text-[11px] text-zinc-100"
+                  >
+                    ← Prev
+                  </button>
+                )}
+                {activeIndex !== null && activeIndex < projects.length - 1 && (
+                  <button
+                    onClick={() => setActiveIndex((i) => (i !== null && i < projects.length - 1 ? (i + 1) : i))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1 text-[11px] text-zinc-100"
+                  >
+                    Next →
+                  </button>
+                )}
+              </div>
+              <div className="p-5 sm:p-6 overflow-y-auto shrink-0">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-400">
+                  <span>{formatDate(activeProject.created_at)}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <a
+                    className="text-zinc-200 hover:underline"
+                    href={activeProject.output_image_url || '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open image
+                  </a>
+                </div>
+                <p className="mt-3 text-sm text-zinc-100 whitespace-pre-wrap break-words">
+                  {activeProject.prompt || '—'}
+                </p>
+                <div className="mt-5 flex gap-2">
+                  <button
+                    onClick={() => { handleDelete(activeProject.id); setActiveIndex(null); }}
+                    className="rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-4 py-2 text-xs text-red-200"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => { if (!activeProject.prompt) return; navigator.clipboard?.writeText(activeProject.prompt); }}
+                    className="rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 text-xs text-zinc-100"
+                  >
+                    Copy prompt
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

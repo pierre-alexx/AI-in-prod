@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import HeroScene from "@/components/scene/HeroScene";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -180,7 +181,7 @@ export default function LandingPage() {
   return (
     <div ref={ref} className="min-h-screen bg-black text-zinc-50">
 
-      <section className="relative overflow-hidden" style={{ backgroundColor: "#000" }}>
+      <section className="relative overflow-hidden min-h-[110vh] sm:min-h-[120vh]" style={{ backgroundColor: "#000" }}>
         {/* Noise overlay for texture */}
         <div 
           className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay z-5"
@@ -249,6 +250,13 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
+            <div className="mt-4 flex justify-center relative z-20">
+              <Link href="/login">
+                <GradientButton size="lg" className="rounded-full font-bold px-10 h-16 text-xl text-black">
+                  Get started
+                </GradientButton>
+              </Link>
+            </div>
           </div>
 
           {/* Removed generation form/results from landing; only CTA remains */}
@@ -259,7 +267,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-white/10">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-12 text-[11px] sm:text-xs text-zinc-500">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 sm:py-6 text-[11px] sm:text-xs text-zinc-500">
           <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
             <span>© {new Date().getFullYear()} Renoir</span>
             <div className="flex gap-3 sm:gap-4">
