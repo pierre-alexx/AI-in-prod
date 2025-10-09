@@ -251,7 +251,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="mt-4 flex justify-center relative z-20">
-              <Link href="/login">
+              <Link href="/signup">
                 <GradientButton size="lg" className="rounded-full font-bold px-10 h-16 text-xl text-black">
                   Get started
                 </GradientButton>
