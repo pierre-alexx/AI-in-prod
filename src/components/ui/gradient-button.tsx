@@ -60,6 +60,15 @@ export function GradientButton({
     props.onClick?.(e);
   };
 
+  // Framer Motion's motion.button has different types for animation lifecycle handlers
+  // than the native DOM events. Remove them from the spread props to avoid a type clash.
+  const {
+    onAnimationStart: _htmlOnAnimationStart,
+    onAnimationEnd: _htmlOnAnimationEnd,
+    onAnimationIteration: _htmlOnAnimationIteration,
+    ...restProps
+  } = props;
+
   const sizeClasses = {
     sm: "h-10 px-4 text-sm",
     md: "h-12 px-6 text-base",
@@ -90,7 +99,7 @@ export function GradientButton({
       disabled={disabled || isLoading}
       whileHover={!disabled && !isLoading ? { scale: 1.02 } : {}}
       whileTap={!disabled && !isLoading ? { scale: 0.98 } : {}}
-      {...props}
+      {...restProps}
     >
       {/* Background with subtle gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-gray-50 rounded-2xl group-hover:from-gray-50 group-hover:via-white group-hover:to-gray-100 transition-all duration-300" />
