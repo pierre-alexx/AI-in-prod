@@ -14,6 +14,10 @@ interface ChatInputProps {
   isLoading?: boolean;
   className?: string;
   maxLength?: number;
+  // When true, the send button requires an image to be present
+  requireImage?: boolean;
+  // Indicates whether an image is currently selected
+  hasImage?: boolean;
 }
 
 export function ChatInput({
@@ -25,6 +29,8 @@ export function ChatInput({
   isLoading = false,
   className,
   maxLength = 500,
+  requireImage = false,
+  hasImage = false,
 }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -48,17 +54,19 @@ export function ChatInput({
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (value.trim() && !disabled && !isLoading) {
+      const allowSubmit = value.trim() && (!requireImage || hasImage) && !disabled && !isLoading;
+      if (allowSubmit) {
         onSubmit();
       }
     }
-  }, [value, disabled, isLoading, onSubmit]);
+  }, [value, requireImage, hasImage, disabled, isLoading, onSubmit]);
 
   const handleSubmit = useCallback(() => {
-    if (value.trim() && !disabled && !isLoading) {
+    const allowSubmit = value.trim() && (!requireImage || hasImage) && !disabled && !isLoading;
+    if (allowSubmit) {
       onSubmit();
     }
-  }, [value, disabled, isLoading, onSubmit]);
+  }, [value, requireImage, hasImage, disabled, isLoading, onSubmit]);
 
   const remainingChars = maxLength - value.length;
   const isNearLimit = remainingChars < 50;
@@ -130,16 +138,16 @@ export function ChatInput({
           {/* Submit Button */}
           <motion.button
             onClick={handleSubmit}
-            disabled={!value.trim() || disabled || isLoading}
+            disabled={!value.trim() || (requireImage && !hasImage) || disabled || isLoading}
             className={cn(
               "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
               "transition-all duration-200",
-              value.trim() && !disabled && !isLoading
+              value.trim() && (!requireImage || hasImage) && !disabled && !isLoading
                 ? "bg-white text-black hover:bg-gray-100 shadow-lg shadow-white/10"
                 : "bg-white/10 text-white/40 cursor-not-allowed"
             )}
-            whileHover={value.trim() && !disabled && !isLoading ? { scale: 1.05 } : {}}
-            whileTap={value.trim() && !disabled && !isLoading ? { scale: 0.95 } : {}}
+            whileHover={value.trim() && (!requireImage || hasImage) && !disabled && !isLoading ? { scale: 1.05 } : {}}
+            whileTap={value.trim() && (!requireImage || hasImage) && !disabled && !isLoading ? { scale: 0.95 } : {}}
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />

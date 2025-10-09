@@ -315,6 +315,8 @@ export default function LandingPage() {
                     disabled={isGenerating}
                     isLoading={isGenerating}
                     maxLength={500}
+                    requireImage
+                    hasImage={!!selectedImage}
                   />
                 </motion.div>
 
