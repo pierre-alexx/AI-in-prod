@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "../app/globals.css";
+import { AuthProvider } from "@/context/AuthContext";
+import { Header } from "@/components/Header";
 
 export const metadata: Metadata = {
   title: "Renoir - Transform images. Instantly.",
@@ -15,7 +17,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <AuthProvider>
+          <Header />
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

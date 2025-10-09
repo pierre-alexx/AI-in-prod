@@ -1,0 +1,56 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+
+const PROTECTED_PATHS = [
+  /^\/dashboard(\/.*)?$/,
+  /^\/api\//,
+];
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  // Redirect authenticated users away from landing to dashboard
+  const res = NextResponse.next();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          res.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          res.cookies.set({ name, value: '', ...options });
+        },
+      },
+    }
+  );
+
+  const { data } = await supabase.auth.getUser();
+
+  if (pathname === '/' && data.user) {
+    const dash = req.nextUrl.clone();
+    dash.pathname = '/dashboard';
+    return NextResponse.redirect(dash);
+  }
+
+  const requiresAuth = PROTECTED_PATHS.some((re) => re.test(pathname));
+  if (!requiresAuth) return res;
+
+  if (!data.user) {
+    const signupUrl = req.nextUrl.clone();
+    signupUrl.pathname = '/signup';
+    signupUrl.searchParams.set('redirectedFrom', pathname);
+    return NextResponse.redirect(signupUrl);
+  }
+
+  return res;
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.svg|.*\\.png|.*\\.jpg).*)'],
+};
+
+

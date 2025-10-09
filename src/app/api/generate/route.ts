@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 
 // Initialize Replicate
 const replicate = new Replicate({
@@ -17,6 +18,26 @@ export async function POST(request: NextRequest) {
   console.log('=== API ROUTE CALLED ===');
   
   try {
+    // Check authenticated user via cookie-based auth
+    const authClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+    const { data: userData } = await authClient.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Validate environment variables
     if (!process.env.REPLICATE_API_TOKEN) {
       console.error('REPLICATE_API_TOKEN is not set');
@@ -405,7 +426,8 @@ export async function POST(request: NextRequest) {
         input_image_url: publicUrl,
         output_image_url: outputPublicUrl,
         prompt: prompt, // Save original prompt, not sanitized
-        status: 'completed'
+        status: 'completed',
+        user_id: userId,
       });
 
     if (dbError) {
