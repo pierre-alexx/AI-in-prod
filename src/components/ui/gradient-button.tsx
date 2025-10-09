@@ -66,6 +66,14 @@ export function GradientButton({
     onAnimationStart: _htmlOnAnimationStart,
     onAnimationEnd: _htmlOnAnimationEnd,
     onAnimationIteration: _htmlOnAnimationIteration,
+    // Remove DOM drag/drop handlers which conflict with Framer Motion's signatures
+    onDrag: _htmlOnDrag,
+    onDragStart: _htmlOnDragStart,
+    onDragEnd: _htmlOnDragEnd,
+    onDragEnter: _htmlOnDragEnter,
+    onDragOver: _htmlOnDragOver,
+    onDragLeave: _htmlOnDragLeave,
+    onDrop: _htmlOnDrop,
     ...restProps
   } = props;
 
