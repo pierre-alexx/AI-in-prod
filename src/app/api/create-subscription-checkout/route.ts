@@ -24,10 +24,7 @@ export async function POST(req: NextRequest) {
       console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
       return NextResponse.json({ error: 'Server misconfigured (service key)' }, { status: 500 });
     }
-    if (!process.env.NEXT_PUBLIC_URL) {
-      console.error('Missing NEXT_PUBLIC_URL');
-      return NextResponse.json({ error: 'Server misconfigured (public url)' }, { status: 500 });
-    }
+    // NEXT_PUBLIC_URL is recommended but fall back to request origin
 
     const stripe = getStripe();
     const supabase = getSupabaseServiceClient();
@@ -52,7 +49,7 @@ export async function POST(req: NextRequest) {
         .upsert({ user_id: user.id, stripe_customer_id: stripeCustomerId }, { onConflict: 'user_id' });
     }
 
-    const base = process.env.NEXT_PUBLIC_URL!.replace(/\/$/, '');
+    const base = (process.env.NEXT_PUBLIC_URL || req.nextUrl.origin).replace(/\/$/, '');
     const successUrl = `${base}/dashboard`;
     const cancelUrl = `${base}/pricing`;
 
@@ -63,10 +60,16 @@ export async function POST(req: NextRequest) {
       allow_promotion_codes: true,
       success_url: successUrl,
       cancel_url: cancelUrl,
+      metadata: {
+        user_id: user.id,
+        price_id: priceId,
+        env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown',
+      },
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url, id: session.id });
   } catch (e: any) {
+    console.error('Checkout error', e);
     return NextResponse.json({ error: e.message ?? 'Server error' }, { status: 500 });
   }
 }
