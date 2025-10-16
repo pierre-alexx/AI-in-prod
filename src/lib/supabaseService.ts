@@ -40,14 +40,16 @@ export async function setQuotaUsed(userId: string, used: number) {
 
 export async function incrementQuotaUsed(userId: string, by: number = 1) {
   const supabase = getSupabaseServiceClient();
-  // optional RPC if user defines it; fallback to update
-  await supabase.rpc('increment_quota_used', { p_user_id: userId, p_by: by }).catch(async () => {
-    const current = await getUserSubscription(userId);
-    const next = (current?.quota_used ?? 0) + by;
-    await supabase
-      .from('subscriptions')
-      .update({ quota_used: next, updated_at: new Date().toISOString() })
-      .eq('user_id', userId);
-  });
+  // Try optional RPC; if not available or errors, fallback to update
+  try {
+    const { error } = await supabase.rpc('increment_quota_used', { p_user_id: userId, p_by: by });
+    if (!error) return;
+  } catch {}
+  const current = await getUserSubscription(userId);
+  const next = (current?.quota_used ?? 0) + by;
+  await supabase
+    .from('subscriptions')
+    .update({ quota_used: next, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
 }
 

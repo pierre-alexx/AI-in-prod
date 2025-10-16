@@ -8,9 +8,7 @@ export function getStripe(): Stripe {
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not set');
     }
-    stripeInstance = new Stripe(secretKey, {
-      apiVersion: '2024-06-20',
-    });
+    stripeInstance = new Stripe(secretKey);
   }
   return stripeInstance;
 }
