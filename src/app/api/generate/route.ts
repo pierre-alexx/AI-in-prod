@@ -81,15 +81,30 @@ export async function POST(request: NextRequest) {
     const effectivePrompt = prompt;
     console.log('Prompt:', effectivePrompt);
 
-    // Upload image to input-images bucket
+    // Upload image to input-images bucket (normalize EXIF orientation to avoid sideways outputs)
     console.log('Starting image upload to Supabase...');
-    const imageBuffer = await image.arrayBuffer();
+    const rawArrayBuffer = await image.arrayBuffer();
+    let uploadBytes: Buffer = Buffer.from(new Uint8Array(rawArrayBuffer));
+    let uploadContentType = image.type || 'image/jpeg';
+    try {
+      const sharp = (await import('sharp')).default;
+      // Auto-rotate based on EXIF orientation and strip orientation metadata
+      let pipeline = sharp(uploadBytes).rotate();
+      // If content type is unusual, normalize to JPEG to ensure broad support
+      if (!/^(image\/(png|jpeg|jpg|webp))$/i.test(uploadContentType)) {
+        uploadContentType = 'image/jpeg';
+        pipeline = pipeline.jpeg({ quality: 95 });
+      }
+      uploadBytes = await pipeline.toBuffer();
+    } catch (exifErr) {
+      console.log('EXIF normalization skipped (sharp not available or failed):', exifErr);
+    }
+
     const imagePath = `input/${Date.now()}-${image.name}`;
-    
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('input-images')
-      .upload(imagePath, imageBuffer, {
-        contentType: image.type,
+      .upload(imagePath, uploadBytes, {
+        contentType: uploadContentType,
         upsert: false
       });
 
