@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
+import { getUserSubscription, incrementQuotaUsed } from '@/lib/supabaseService';
+import { isActiveStatus } from '@/lib/utils';
 
 // Initialize Replicate
 const replicate = new Replicate({
@@ -56,6 +58,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Environment variables validated successfully');
+
+    // Subscription and quota check
+    const sub = await getUserSubscription(userId);
+    if (!sub || !isActiveStatus(sub.status)) {
+      return NextResponse.json({ error: 'Subscription required' }, { status: 402 });
+    }
+    if ((sub.quota_used ?? 0) >= (sub.quota_limit ?? 0)) {
+      return NextResponse.json({ error: 'Quota exceeded. Please upgrade to Pro.' }, { status: 402 });
+    }
 
     const formData = await request.formData();
     const image = formData.get('image') as File;
@@ -483,6 +494,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Increment quota after success
+    await incrementQuotaUsed(userId, 1);
 
     console.log('Returning URLs:', {
       inputImageUrl: publicUrl,

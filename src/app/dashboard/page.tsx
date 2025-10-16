@@ -8,6 +8,7 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { ChatInput } from "@/components/ui/chat-input";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { ModelSelector } from "@/components/ui/model-selector";
+// Subscription UI moved to Profile page
 
 type Project = {
   id: string;
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [inputImageUrl, setInputImageUrl] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  // Subscription state is handled in Profile page
   const activeProject = activeIndex !== null && activeIndex >= 0 && activeIndex < projects.length ? projects[activeIndex] : null;
   // Keyboard handlers for modal navigation
   useEffect(() => {
@@ -59,6 +61,8 @@ export default function DashboardPage() {
     };
     load();
   }, [user, supabase]);
+
+  // Subscription fetch moved to Profile page
 
   async function generateImage(e: React.FormEvent) {
     e.preventDefault();
@@ -115,6 +119,7 @@ export default function DashboardPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8 text-white">
       <h1 className="mb-6 text-4xl sm:text-5xl md:text-6xl" style={{ fontFamily: 'SentinelBlack' }}>Dashboard</h1>
+      {/* Subscription status moved to Profile */}
 
       {/* Image Generation Flow - same as landing */}
       <div className="relative z-20 mt-2">
@@ -147,6 +152,7 @@ export default function DashboardPage() {
                     Generate Image
                   </GradientButton>
                 </motion.div>
+                {/* Quota message moved to Profile */}
               </form>
             </div>
           </div>
