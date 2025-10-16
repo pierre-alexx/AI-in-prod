@@ -44,31 +44,9 @@ export function Header() {
           )}
 
           {showProfile && (pathname === "/dashboard" || pathname === "/profile") && (
-            <button
-              onClick={async () => {
-                setUpgradeLoading(true);
-                try {
-                  const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO as string | undefined;
-                  if (!priceId) throw new Error('Missing Pro price id');
-                  const res = await fetch('/api/create-subscription-checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ priceId }),
-                  });
-                  const data = await res.json();
-                  if (!res.ok || !data.url) throw new Error(data.error || 'Unable to start checkout');
-                  window.location.href = data.url as string;
-                } catch (e: any) {
-                  console.error(e);
-                } finally {
-                  setUpgradeLoading(false);
-                }
-              }}
-              disabled={upgradeLoading}
-              className="px-3 py-1 rounded-full text-xs bg-white text-black hover:bg-white/90"
-            >
-              {upgradeLoading ? 'Opening…' : 'Upgrade'}
-            </button>
+            <Link href="/pricing" className="px-3 py-1 rounded-full text-xs bg-white text-black hover:bg-white/90">
+              Upgrade
+            </Link>
           )}
         </nav>
       </div>

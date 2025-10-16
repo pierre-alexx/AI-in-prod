@@ -36,11 +36,11 @@ export default function ProfilePage() {
   const limit = row?.quota_limit ?? 0;
   const used = row?.quota_used ?? 0;
   const percent = limit ? Math.min(100, (used / limit) * 100) : 0;
-  const plan = row?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-    ? 'Pro plan'
-    : row?.stripe_price_id
-      ? 'Basic plan'
-      : 'Free';
+  // Show Free unless an active subscription status is present
+  const hasActive = row?.status === 'active' || row?.status === 'trialing' || row?.status === 'past_due';
+  const plan = hasActive
+    ? (row?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO ? 'Pro plan' : 'Basic plan')
+    : 'Free';
 
   const openPortal = async () => {
     setError(null);
@@ -72,13 +72,12 @@ export default function ProfilePage() {
             <p className="text-2xl font-semibold">{plan}</p>
             <p className="mt-1 text-xs text-zinc-400">Status: {row?.status ?? '—'}</p>
           </div>
-          <button
-            onClick={openPortal}
-            disabled={loadingPortal}
+          <a
+            href="/subscription"
             className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 text-sm"
           >
-            {loadingPortal ? 'Opening…' : 'Manage subscription'}
-          </button>
+            Manage subscription
+          </a>
         </div>
 
         <div className="mt-6">
