@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 
 const PROTECTED_PATHS = [
   /^\/dashboard(\/.*)?$/,
+  // Protect API by default, but we'll explicitly allow the Stripe webhook below
   /^\/api\//,
 ];
 
@@ -34,6 +35,11 @@ export async function middleware(req: NextRequest) {
     const dash = req.nextUrl.clone();
     dash.pathname = '/dashboard';
     return NextResponse.redirect(dash);
+  }
+
+  // Allow public access to Stripe webhooks (Stripe cannot be authenticated)
+  if (pathname.startsWith('/api/webhooks/stripe')) {
+    return res;
   }
 
   const requiresAuth = PROTECTED_PATHS.some((re) => re.test(pathname));
