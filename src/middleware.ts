@@ -42,6 +42,11 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // Allow checkout and portal endpoints to handle auth themselves and return JSON
+  if (pathname === '/api/create-subscription-checkout' || pathname === '/api/create-portal-session') {
+    return res;
+  }
+
   const requiresAuth = PROTECTED_PATHS.some((re) => re.test(pathname));
   if (!requiresAuth) return res;
 
