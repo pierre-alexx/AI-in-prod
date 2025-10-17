@@ -21,12 +21,13 @@ export function PricingCard({ name, price, description, features, priceId }: Pro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ priceId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Checkout failed');
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok) throw new Error(data?.error || `Checkout failed (${res.status})`);
       if (data.url) window.location.href = data.url as string;
     } catch (e) {
       console.error(e);
-      alert('Unable to start checkout.');
+      const msg = e instanceof Error ? e.message : 'Unable to start checkout.';
+      alert(msg);
     } finally {
       setLoading(false);
     }
