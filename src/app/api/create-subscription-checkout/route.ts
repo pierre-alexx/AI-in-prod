@@ -13,7 +13,12 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const priceId = body?.priceId as string | undefined;
+    let priceId = body?.priceId as string | undefined;
+    const plan = (body?.plan as string | undefined)?.toLowerCase();
+    if (!priceId && plan) {
+      if (plan === 'basic') priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC;
+      if (plan === 'pro') priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO;
+    }
     if (!priceId) return NextResponse.json({ error: 'priceId required' }, { status: 400 });
 
     if (!process.env.STRIPE_SECRET_KEY) {

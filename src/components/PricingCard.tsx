@@ -16,10 +16,13 @@ export function PricingCard({ name, price, description, features, priceId }: Pro
   const onSubscribe = async () => {
     setLoading(true);
     try {
+      if (!priceId) {
+        throw new Error('Missing priceId. Configure NEXT_PUBLIC_STRIPE_PRICE_BASIC/PRO in your env.');
+      }
       const res = await fetch('/api/create-subscription-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ priceId, plan: name.toLowerCase() }),
       });
       const data = await res.json().catch(() => ({} as any));
       if (!res.ok) throw new Error(data?.error || `Checkout failed (${res.status})`);
