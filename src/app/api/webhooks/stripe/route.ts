@@ -29,18 +29,22 @@ export async function POST(req: NextRequest) {
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string | undefined;
         const priceId = session?.line_items?.data?.[0]?.price?.id || session?.metadata?.price_id || null;
+        const userId = session?.metadata?.user_id;
 
-        // We rely on customer.subscription.created/updated to set the rest
-        await supabase.from('subscriptions').upsert(
-          {
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId ?? null,
-            stripe_price_id: priceId,
-            status: 'active',
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'stripe_customer_id' }
-        );
+        if (userId) {
+          // We rely on customer.subscription.created/updated to set the rest
+          await supabase.from('subscriptions').upsert(
+            {
+              user_id: userId,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId ?? null,
+              stripe_price_id: priceId,
+              status: 'active',
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' }
+          );
+        }
         break;
       }
       case 'customer.subscription.created':
@@ -58,19 +62,29 @@ export async function POST(req: NextRequest) {
           else if (priceId === process.env.STRIPE_PRICE_PRO) quotaLimit = 200;
         }
 
-        await supabase.from('subscriptions').upsert(
-          {
-            stripe_customer_id: customerId,
-            stripe_subscription_id: sub.id as string,
-            stripe_price_id: priceId,
-            status,
-            current_period_start: currentPeriodStart,
-            current_period_end: currentPeriodEnd,
-            quota_limit: quotaLimit,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'stripe_customer_id' }
-        );
+        // First, find the user_id from the existing subscription record
+        const { data: existingSub } = await supabase
+          .from('subscriptions')
+          .select('user_id')
+          .eq('stripe_customer_id', customerId)
+          .single();
+
+        if (existingSub?.user_id) {
+          await supabase.from('subscriptions').upsert(
+            {
+              user_id: existingSub.user_id,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: sub.id as string,
+              stripe_price_id: priceId,
+              status,
+              current_period_start: currentPeriodStart,
+              current_period_end: currentPeriodEnd,
+              quota_limit: quotaLimit,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' }
+          );
+        }
         break;
       }
       case 'customer.subscription.deleted': {

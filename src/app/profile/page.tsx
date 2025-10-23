@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { SubscriptionFix } from '@/components/SubscriptionFix';
 
 type SubRow = {
   stripe_price_id: string | null;
@@ -125,6 +126,13 @@ export default function ProfilePage() {
           <li>Invoices and payment methods live in the portal.</li>
         </ul>
       </section>
+
+      {/* Manual subscription fix for debugging */}
+      {!hasActive && (
+        <section className="mt-8">
+          <SubscriptionFix />
+        </section>
+      )}
 
       <section className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="flex items-center justify-between">
