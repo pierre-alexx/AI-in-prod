@@ -51,7 +51,11 @@ export default function SubscriptionHubPage() {
     }
   };
 
+  // Show loading while checking subscription status
   if (isLoading || active === null) return <div className="p-6 text-white">Loading…</div>;
+
+  // If no active subscription, don't render anything as we'll redirect
+  if (active === false) return <div className="p-6 text-white">Redirecting…</div>;
 
   return (
     <main className="mx-auto max-w-3xl px-4 sm:px-6 py-10 text-white">

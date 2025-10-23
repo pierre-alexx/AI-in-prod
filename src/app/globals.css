@@ -166,6 +166,11 @@
     -ms-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
+  
+  /* Custom cursor system - clean implementation */
+  * {
+    cursor: url('/arrow.svg') 8 8, auto !important;
+  }
 }
 
 /* Fast caret blink for typing cursor */
@@ -174,54 +179,64 @@
   50%, 100% { opacity: 0; }
 }
 
-/* Cursor assets: default arrow and pointer on interactive elements */
+/* Custom cursor overrides for interactive elements */
 @layer base {
-  /* Default cursor across the app */
-  html, body {
-    cursor: url('/arrow.svg') 0 0, auto;
+  /* Interactive elements use pointer cursor */
+  a, button, [role=button], [role=link], 
+  input:not([type=hidden]), textarea, select,
+  [data-cursor=pointer], .cursor-pointer, .pointer,
+  [tabindex]:not([tabindex="-1"]), [role=menuitem],
+  [role=option], [role=tab], [role=switch],
+  [role=checkbox], [role=radio], [role=slider],
+  [role=combobox], input[type=submit], input[type=button],
+  input[type=checkbox], input[type=radio], input[type=file],
+  summary, label, option {
+    cursor: url('/pointer.svg') 8 8, pointer !important;
   }
 
-  /* Ensure text inputs/textareas keep text cursor */
-  input[type="text"], input[type="search"], input[type="password"], textarea {
-    cursor: text;
+  /* Ensure logo area and all link children get pointer cursor */
+  a *, a img, a span, a div, a svg {
+    cursor: url('/pointer.svg') 8 8, pointer !important;
   }
 
-  /* Buttons and interactive elements use pointer cursor */
-  button,
-  a,
-  summary,
-  label,
-  select,
-  option,
-  input[type="submit"],
-  input[type="button"],
-  input[type="checkbox"],
-  input[type="radio"],
-  input[type="file"],
-  /* ARIA roles commonly used for clickable widgets */
-  [role="button"],
-  [role="link"],
-  [role="menuitem"],
-  [role="option"],
-  [role="tab"],
-  [role="switch"],
-  [role="checkbox"],
-  [role="radio"],
-  [role="slider"],
-  [role="combobox"],
-  /* Any focusable element is likely interactive */
-  [tabindex]:not([tabindex="-1"]),
-  /* Utility escape hatches */
-  .cursor-pointer,
-  [data-cursor="pointer"],
-  [data-clickable] {
-    cursor: url('/pointer.svg') 0 0, pointer;
+  /* Specific rule for header logo area */
+  header a, header a *, header a img, header a span {
+    cursor: url('/pointer.svg') 8 8, pointer !important;
+  }
+
+  /* Text inputs keep text cursor with custom fallback */
+  input[type="text"], input[type="search"], input[type="password"],
+  input[type="email"], input[type="url"], input[type="tel"], textarea {
+    cursor: url('/arrow.svg') 8 8, text !important;
+  }
+
+  /* Draggable elements */
+  [data-cursor="grab"], .cursor-grab {
+    cursor: url('/pointer.svg') 8 8, grab !important;
+  }
+
+  /* While dragging */
+  [data-cursor="grabbing"], .cursor-grabbing,
+  [data-cursor="grab"]:active, .cursor-grab:active {
+    cursor: url('/pointer.svg') 8 8, grabbing !important;
   }
 }
 
-/* Ensure our cursor utility overrides Tailwind's default `.cursor-pointer` */
+/* Override any Tailwind cursor utilities */
 @layer utilities {
   .cursor-pointer {
-    cursor: url('/pointer.svg') 0 0, pointer;
+    cursor: url('/pointer.svg') 8 8, pointer !important;
+  }
+  .cursor-auto {
+    cursor: url('/arrow.svg') 8 8, auto !important;
+  }
+  .cursor-default {
+    cursor: url('/arrow.svg') 8 8, auto !important;
+  }
+  .cursor-grab {
+    cursor: url('/pointer.svg') 8 8, grab !important;
+  }
+  .cursor-grabbing {
+    cursor: url('/pointer.svg') 8 8, grabbing !important;
   }
 }

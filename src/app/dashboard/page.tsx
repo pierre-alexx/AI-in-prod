@@ -8,7 +8,7 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { ChatInput } from "@/components/ui/chat-input";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { ModelSelector } from "@/components/ui/model-selector";
-// Subscription UI moved to Profile page
+import { CreditCounter } from "@/components/CreditCounter";
 
 type Project = {
   id: string;
@@ -78,9 +78,22 @@ export default function DashboardPage() {
       formData.append('model', selectedModel);
       const res = await fetch("/api/generate", { method: "POST", body: formData });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      if (!res.ok) {
+        // Handle subscription/credits scenario
+        if (data.code === 'SUBSCRIPTION_REQUIRED' || data.code === 'NO_CREDITS' || data.code === 'QUOTA_EXCEEDED') {
+          if (data.redirectTo) {
+            window.location.href = data.redirectTo;
+            return;
+          }
+        }
+        throw new Error(data.error || 'Generation failed');
+      }
       setGeneratedImageUrl(data.outputImageUrl);
       setInputImageUrl(data.inputImageUrl);
+      
+      // Refresh credits immediately after successful generation
+      window.dispatchEvent(new CustomEvent('refreshCredits'));
+      
       // refresh list
       const { data: rows } = await supabase
         .from("projects")
@@ -118,8 +131,17 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8 text-white">
-      <h1 className="mb-6 text-4xl sm:text-5xl md:text-6xl" style={{ fontFamily: 'SentinelBlack' }}>Dashboard</h1>
-      {/* Subscription status moved to Profile */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl" style={{ fontFamily: 'SentinelBlack' }}>Dashboard</h1>
+        <div className="hidden md:block">
+          <CreditCounter />
+        </div>
+      </div>
+      
+      {/* Mobile credit counter */}
+      <div className="md:hidden mb-6">
+        <CreditCounter />
+      </div>
 
       {/* Image Generation Flow - same as landing */}
       <div className="relative z-20 mt-2">

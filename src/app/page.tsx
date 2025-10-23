@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import HeroScene from "@/components/scene/HeroScene";
+import LazyHeroScene from "@/components/scene/LazyHeroScene";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { ChatInput } from "@/components/ui/chat-input";
 import { GradientButton } from "@/components/ui/gradient-button";
@@ -120,6 +120,13 @@ export default function LandingPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle subscription/credits scenario
+        if (data.code === 'SUBSCRIPTION_REQUIRED' || data.code === 'NO_CREDITS' || data.code === 'QUOTA_EXCEEDED') {
+          if (data.redirectTo) {
+            window.location.href = data.redirectTo;
+            return;
+          }
+        }
         const errorMessage = data.error || 'Generation failed';
         const errorDetails = data.details ? ` ${data.details}` : '';
         throw new Error(errorMessage + errorDetails);
@@ -129,6 +136,9 @@ export default function LandingPage() {
         inputImageUrl: data.inputImageUrl,
         outputImageUrl: data.outputImageUrl
       });
+      
+      // Refresh credits immediately after successful generation
+      window.dispatchEvent(new CustomEvent('refreshCredits'));
       
       // Test if the URLs are accessible
       if (data.inputImageUrl) {
@@ -197,7 +207,7 @@ export default function LandingPage() {
           {!mounted && <div className="w-full h-full bg-black" />}
           {mounted && (
             <div className="block w-full h-full min-h-[420px] sm:min-h-0">
-              <HeroScene />
+              <LazyHeroScene />
             </div>
           )}
         </div>

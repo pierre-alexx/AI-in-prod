@@ -8,9 +8,10 @@ type Props = {
   description?: string;
   features: string[];
   priceId: string;
+  isCurrent?: boolean;
 };
 
-export function PricingCard({ name, price, description, features, priceId }: Props) {
+export function PricingCard({ name, price, description, features, priceId, isCurrent = false }: Props) {
   const [loading, setLoading] = useState(false);
 
   const onSubscribe = async () => {
@@ -37,7 +38,11 @@ export function PricingCard({ name, price, description, features, priceId }: Pro
   };
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-white">
+    <div className={`rounded-3xl border p-6 text-white ${
+      isCurrent 
+        ? 'border-blue-500/50 bg-blue-500/5' 
+        : 'border-white/10 bg-white/[0.03]'
+    }`}>
       <h3 className="text-2xl font-semibold">{name}</h3>
       <p className="mt-2 text-3xl">{price}</p>
       {description && <p className="mt-2 text-sm text-zinc-300">{description}</p>}
@@ -46,13 +51,19 @@ export function PricingCard({ name, price, description, features, priceId }: Pro
           <li key={f}>• {f}</li>
         ))}
       </ul>
-      <button
-        onClick={onSubscribe}
-        disabled={loading}
-        className="mt-6 w-full rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 py-3"
-      >
-        {loading ? 'Redirecting…' : 'Subscribe'}
-      </button>
+      {isCurrent ? (
+        <div className="mt-6 w-full rounded-xl bg-blue-500/20 border border-blue-500/30 py-3 text-center text-sm text-blue-200">
+          Current Plan
+        </div>
+      ) : (
+        <button
+          onClick={onSubscribe}
+          disabled={loading}
+          className="mt-6 w-full rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 py-3"
+        >
+          {loading ? 'Redirecting…' : 'Subscribe'}
+        </button>
+      )}
     </div>
   );
 }

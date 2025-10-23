@@ -33,14 +33,17 @@ export default function ProfilePage() {
     load();
   }, [user, supabase]);
 
-  const limit = row?.quota_limit ?? 0;
-  const used = row?.quota_used ?? 0;
-  const percent = limit ? Math.min(100, (used / limit) * 100) : 0;
-  // Show Free unless an active subscription status is present
+  // Check if user has active subscription
   const hasActive = row?.status === 'active' || row?.status === 'trialing' || row?.status === 'past_due';
   const plan = hasActive
     ? (row?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO ? 'Pro plan' : 'Basic plan')
-    : 'Free';
+    : 'No Subscription';
+
+  // Only show credits for active subscribers
+  const limit = hasActive ? (row?.quota_limit ?? 0) : 0;
+  const used = hasActive ? (row?.quota_used ?? 0) : 0;
+  const remaining = Math.max(0, limit - used);
+  const percent = limit ? Math.min(100, (used / limit) * 100) : 0;
 
   const openPortal = async () => {
     setError(null);
@@ -80,15 +83,34 @@ export default function ProfilePage() {
           </a>
         </div>
 
-        <div className="mt-6">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-300">Usage this period</span>
-            <span className="font-medium">{Math.max(0, limit - used)}/{limit}</span>
+        {hasActive ? (
+          <div className="mt-6">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-300">Credits remaining</span>
+              <span className="font-medium">{remaining}/{limit}</span>
+            </div>
+            <div className="mt-2 h-2 w-full rounded bg-white/10">
+              <div 
+                className={`h-2 rounded transition-all ${
+                  remaining === 0 ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                }`}
+                style={{ width: `${percent}%` }} 
+              />
+            </div>
           </div>
-          <div className="mt-2 h-2 w-full rounded bg-white/10">
-            <div className="h-2 rounded bg-white/70 transition-all" style={{ width: `${percent}%` }} />
+        ) : (
+          <div className="mt-6 p-6 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30">
+            <p className="text-sm text-blue-300 mb-4 text-center">
+              Subscribe to start generating images
+            </p>
+            <a 
+              href="/pricing" 
+              className="block w-full text-center rounded-xl bg-white text-black font-bold py-3 px-6 text-base transition-all shadow-lg hover:shadow-xl transform hover:scale-105 hover:bg-gray-100"
+            >
+              Get Credits →
+            </a>
           </div>
-        </div>
+        )}
 
         {error && (
           <p className="mt-4 text-sm text-red-300">{error}</p>

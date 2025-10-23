@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { getUserSubscription, incrementQuotaUsed } from '@/lib/supabaseService';
 import { isActiveStatus } from '@/lib/utils';
+import { initializeUserSubscription } from '@/lib/initializeUser';
 
 // Initialize Replicate
 const replicate = new Replicate({
@@ -59,13 +60,33 @@ export async function POST(request: NextRequest) {
 
     console.log('Environment variables validated successfully');
 
+    // Initialize user subscription if needed
+    await initializeUserSubscription(userId);
+    
     // Subscription and quota check
     const sub = await getUserSubscription(userId);
+    
+    // Handle users without active subscription
     if (!sub || !isActiveStatus(sub.status)) {
-      return NextResponse.json({ error: 'Subscription required' }, { status: 402 });
+      return NextResponse.json({ 
+        error: 'Subscription required. Please subscribe to generate images.',
+        code: 'SUBSCRIPTION_REQUIRED',
+        redirectTo: '/pricing'
+      }, { status: 402 });
     }
-    if ((sub.quota_used ?? 0) >= (sub.quota_limit ?? 0)) {
-      return NextResponse.json({ error: 'Quota exceeded. Please upgrade to Pro.' }, { status: 402 });
+    
+    // Handle paid users
+    if (sub && isActiveStatus(sub.status)) {
+      const quotaUsed = sub.quota_used ?? 0;
+      const quotaLimit = sub.quota_limit ?? 0;
+      
+      if (quotaUsed >= quotaLimit) {
+        return NextResponse.json({ 
+          error: 'No credits remaining. Please upgrade your plan.',
+          code: 'QUOTA_EXCEEDED',
+          redirectTo: '/pricing'
+        }, { status: 402 });
+      }
     }
 
     const formData = await request.formData();
@@ -181,6 +202,21 @@ export async function POST(request: NextRequest) {
           console.log('Could not get image dimensions, using default 1024x1024:', dimensionError);
         }
         
+        // Final credit check before generation
+        const finalSub = await getUserSubscription(userId);
+        if (finalSub && isActiveStatus(finalSub.status)) {
+          const finalQuotaUsed = finalSub.quota_used ?? 0;
+          const finalQuotaLimit = finalSub.quota_limit ?? 0;
+          
+          if (finalQuotaUsed >= finalQuotaLimit) {
+            return NextResponse.json({ 
+              error: 'No credits remaining. Please upgrade your plan.',
+              code: 'QUOTA_EXCEEDED',
+              redirectTo: '/pricing'
+            }, { status: 402 });
+          }
+        }
+        
         output = await replicate.run("black-forest-labs/flux-kontext-dev" as any, {
           input: {
             prompt: effectivePrompt,
@@ -194,6 +230,22 @@ export async function POST(request: NextRequest) {
       } else if (selectedModel.includes("google/nano-banana")) {
         // Google Nano Banana supports image_input (array) and prompt
         console.log('Using Google Nano Banana');
+        
+        // Final credit check before generation
+        const finalSub = await getUserSubscription(userId);
+        if (finalSub && isActiveStatus(finalSub.status)) {
+          const finalQuotaUsed = finalSub.quota_used ?? 0;
+          const finalQuotaLimit = finalSub.quota_limit ?? 0;
+          
+          if (finalQuotaUsed >= finalQuotaLimit) {
+            return NextResponse.json({ 
+              error: 'No credits remaining. Please upgrade your plan.',
+              code: 'QUOTA_EXCEEDED',
+              redirectTo: '/pricing'
+            }, { status: 402 });
+          }
+        }
+        
         const imageInputs = publicUrl ? [publicUrl] : [];
         output = await replicate.run("google/nano-banana" as any, {
           input: {

@@ -61,7 +61,7 @@ function FloatingShape({
       case "orb": {
         return (
           <mesh castShadow receiveShadow>
-            <sphereGeometry args={[1.2, 64, 64]} />
+            <sphereGeometry args={[1.2, 32, 32]} />
             <meshPhysicalMaterial
               color={LIGHT}
               roughness={0.08}
@@ -81,7 +81,7 @@ function FloatingShape({
       case "blob": {
         return (
           <mesh castShadow receiveShadow>
-            <icosahedronGeometry args={[1.2, 6]} />
+            <icosahedronGeometry args={[1.2, 3]} />
             <meshPhysicalMaterial
               color={LIGHT_ALT}
               roughness={0.12}
@@ -101,7 +101,7 @@ function FloatingShape({
       case "torus": {
         return (
           <mesh castShadow receiveShadow>
-            <torusGeometry args={[1, 0.35, 64, 128]} />
+            <torusGeometry args={[1, 0.35, 32, 64]} />
             <meshPhysicalMaterial
               color={color ?? BLACK}
               metalness={0.6}
@@ -110,8 +110,6 @@ function FloatingShape({
               clearcoatRoughness={0.08}
               envMapIntensity={2.5}
             />
-
-
           </mesh>
         );
       }
@@ -133,7 +131,7 @@ function FloatingShape({
 }
 
 export default function HeroScene() {
-  const count = 12;
+  const count = 8; // Reduced from 12 to 8 for better performance
   const shapes = Array.from({ length: count }, () => "torus");
   // Palette: black, white, light grey (Apple-style)
   const COLORS = ["#0a0a0a", "#f5f7fa", "#e9ecf1"] as const;
@@ -210,9 +208,11 @@ export default function HeroScene() {
     <Canvas
       className="h-full w-full"
       gl={{
-        antialias: true,
+        antialias: false, // Disabled for better performance
         alpha: false,
         powerPreference: "high-performance",
+        stencil: false,
+        depth: true,
       }}
       camera={{
         position: [0, 0, 10],
@@ -220,7 +220,10 @@ export default function HeroScene() {
         near: 0.1,
         far: 1000,
       }}
-      dpr={[1, 2]}
+      dpr={[0.5, 1]} // Reduced DPR for better performance
+      performance={{
+        min: 0.5, // Allow frame drops for better performance
+      }}
     >
       {/* Ensure black clear color when opaque */}
       <color attach="background" args={["#000000"]} />
